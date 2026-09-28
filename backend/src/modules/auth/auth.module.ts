@@ -32,7 +32,10 @@ import { PermissionsGuard } from './guards/permissions.guard';
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRES_IN', '7d') as any,
+            expiresIn: configService.get<string>(
+              'JWT_EXPIRES_IN',
+              '29d',
+            ) as any,
           },
         };
       },
