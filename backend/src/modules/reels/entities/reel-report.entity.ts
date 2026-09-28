@@ -56,7 +56,7 @@ export class ReelReport {
   @Column({ name: 'admin_notes', type: 'text', nullable: true })
   adminNotes?: string | null;
 
-  @Column({ name: 'reviewed_by_id', nullable: true })
+  @Column({ name: 'reviewed_by_id', type: 'varchar', length: 36, nullable: true })
   reviewedById?: string | null;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })

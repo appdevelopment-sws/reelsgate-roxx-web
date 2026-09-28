@@ -34,7 +34,7 @@ export class ActivityLog {
   /**
    * The user who performed the action (nullable for system events).
    */
-  @Column({ name: 'actor_id', nullable: true })
+  @Column({ name: 'actor_id', type: 'varchar', length: 36, nullable: true })
   actorId: string | null;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
@@ -45,7 +45,7 @@ export class ActivityLog {
    * The user who receives this notification in their activity feed.
    * Null when isGlobal = true (global events don't target a specific user).
    */
-  @Column({ name: 'target_user_id', nullable: true })
+  @Column({ name: 'target_user_id', type: 'varchar', length: 36, nullable: true })
   @Index()
   targetUserId: string | null;
 
@@ -56,7 +56,7 @@ export class ActivityLog {
   /**
    * Optional reference to the reel this activity is about.
    */
-  @Column({ name: 'reel_id', nullable: true })
+  @Column({ name: 'reel_id', type: 'varchar', length: 36, nullable: true })
   reelId: string | null;
 
   @ManyToOne(() => Reel, { onDelete: 'SET NULL', nullable: true })

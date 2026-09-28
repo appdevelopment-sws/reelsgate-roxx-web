@@ -46,11 +46,11 @@ export class User {
   @Column({ nullable: true })
   district: string;
 
-  @Column({ nullable: true })
-  avatarUrl: string | null;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl?: string | null;
 
-  @Column({ nullable: true })
-  coverImageUrl: string | null;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  coverImageUrl?: string | null;
 
   @Column({ nullable: true })
   profession: string;
