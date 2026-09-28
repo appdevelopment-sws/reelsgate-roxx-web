@@ -302,6 +302,18 @@ export class ReelsService {
         minRating: query.minRating,
       });
     }
+    if (query.state && query.state.toLowerCase() !== 'all') {
+      qb.andWhere(
+        '(LOWER(reel.state) = LOWER(:state) OR LOWER(reel.location) LIKE LOWER(:stateLike) OR LOWER(creator.state) = LOWER(:state) OR LOWER(creator.address) LIKE LOWER(:stateLike))',
+        { state: query.state.trim(), stateLike: `%${query.state.trim()}%` },
+      );
+    }
+    if (query.district && query.district.toLowerCase() !== 'all') {
+      qb.andWhere(
+        '(LOWER(reel.city) = LOWER(:district) OR LOWER(reel.location) LIKE LOWER(:districtLike) OR LOWER(creator.district) = LOWER(:district) OR LOWER(creator.address) LIKE LOWER(:districtLike))',
+        { district: query.district.trim(), districtLike: `%${query.district.trim()}%` },
+      );
+    }
     if (query.userId && !query.liked) {
       qb.andWhere('reel.userId = :userId', { userId: query.userId });
     } else if (userId && !query.liked) {

@@ -302,6 +302,16 @@ export class FeedQueryDto {
   @IsEnum(FeedSortBy)
   @IsOptional()
   sortBy?: FeedSortBy;
+
+  @ApiProperty({ example: 'Maharashtra', required: false })
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @ApiProperty({ example: 'Mumbai', required: false })
+  @IsString()
+  @IsOptional()
+  district?: string;
 }
 
 export class UpdateReelDto {
