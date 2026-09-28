@@ -522,7 +522,7 @@ export class MessagingService {
       this.notificationsService
         .sendMessagePush(
           fullMessage?.sender?.name || 'New Message',
-          fullMessage?.sender?.avatarUrl,
+          fullMessage?.sender?.avatarUrl || undefined,
           otherP.userId,
           fullMessage?.content || 'Sent an attachment',
           dto.conversationId,

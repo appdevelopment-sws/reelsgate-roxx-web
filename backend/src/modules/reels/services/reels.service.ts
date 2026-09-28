@@ -1867,10 +1867,23 @@ export class ReelsService {
             (user.name ? user.name.replace(/\s+/g, '_').toLowerCase() : 'creator'),
           avatarUrl,
           isVerified: user.isVerified || false,
-          title:
-            reelsCount > 0
-              ? `${reelsCount} Reel${reelsCount > 1 ? 's' : ''}`
-              : 'Creator',
+          title: user.profession || 'Real Estate Agent',
+          profession: user.profession || '',
+          bio: user.bio || '',
+          location:
+            [user.district, user.state].filter(Boolean).join(', ') ||
+            user.address ||
+            '',
+          state: user.state || '',
+          district: user.district || '',
+          address: user.address || '',
+          email: user.email || '',
+          website: user.website || '',
+          phone: user.phone || '',
+          whatsapp: user.whatsapp || user.phone || '',
+          gender: user.gender || '',
+          rating: user.rating !== undefined ? Number(user.rating) : 4.8,
+          ratingsCount: user.ratingsCount || 0,
           followersCount,
           reelsCount,
           isFollowing,

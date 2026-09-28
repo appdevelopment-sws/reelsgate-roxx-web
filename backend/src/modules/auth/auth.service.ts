@@ -1044,11 +1044,11 @@ export class AuthService implements OnModuleInit {
     }
 
     if (dto.avatarUrl !== undefined) {
-      user.avatarUrl = dto.avatarUrl;
+      user.avatarUrl = dto.avatarUrl?.trim() === '' ? null : dto.avatarUrl;
     }
 
     if (dto.coverImageUrl !== undefined) {
-      user.coverImageUrl = dto.coverImageUrl;
+      user.coverImageUrl = dto.coverImageUrl?.trim() === '' ? null : dto.coverImageUrl;
     }
 
     if (dto.profession !== undefined) {

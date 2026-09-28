@@ -47,10 +47,10 @@ export class User {
   district: string;
 
   @Column({ nullable: true })
-  avatarUrl: string;
+  avatarUrl: string | null;
 
   @Column({ nullable: true })
-  coverImageUrl: string;
+  coverImageUrl: string | null;
 
   @Column({ nullable: true })
   profession: string;
