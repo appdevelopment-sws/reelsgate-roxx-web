@@ -46,11 +46,11 @@ export class User {
   @Column({ nullable: true })
   district: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  avatarUrl?: string | null;
+  @Column({ nullable: true })
+  avatarUrl: string | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  coverImageUrl?: string | null;
+  @Column({ nullable: true })
+  coverImageUrl: string | null;
 
   @Column({ nullable: true })
   profession: string;
@@ -80,7 +80,6 @@ export class User {
 
   @Column({ default: false })
   isPhoneVerified: boolean;
-
 
   @Column({ nullable: true, select: false })
   password?: string;
