@@ -45,11 +45,18 @@ export class User {
 
   @Column({ nullable: true })
   district: string;
-
-  @Column({ nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 2048,
+    nullable: true,
+  })
   avatarUrl: string | null;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 2048,
+    nullable: true,
+  })
   coverImageUrl: string | null;
 
   @Column({ nullable: true })
