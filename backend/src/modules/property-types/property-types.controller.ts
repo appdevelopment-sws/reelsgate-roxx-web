@@ -53,8 +53,15 @@ export class PropertyTypesController {
   async getPropertyTypes(
     @Query('subCategoryId') subCategoryId?: string,
     @Query('subCategorySlug') subCategorySlug?: string,
+    @Query('hasVideos') hasVideos?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.propertyTypesService.findAll(subCategoryId, subCategorySlug);
+    return this.propertyTypesService.findAll(
+      subCategoryId,
+      subCategorySlug,
+      hasVideos === 'true',
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @ApiBearerAuth()

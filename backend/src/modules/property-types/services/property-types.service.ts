@@ -43,7 +43,9 @@ export class PropertyTypesService implements OnModuleInit {
   async findAll(
     subCategoryId?: string,
     subCategorySlug?: string,
-  ): Promise<PropertyType[]> {
+    hasVideos?: boolean,
+    limit?: number,
+  ): Promise<any[]> {
     let resolvedSubId = subCategoryId;
 
     if (!resolvedSubId && subCategorySlug) {
@@ -147,14 +149,23 @@ export class PropertyTypesService implements OnModuleInit {
         }
       }
 
-      const all = [...enriched, ...customTypesFromReels];
+      let all = [...enriched, ...customTypesFromReels];
+      if (hasVideos) {
+        all = all.filter((item) => (item.reelsCount || 0) > 0);
+      }
       all.sort(
         (a, b) =>
           (b.reelsCount || 0) - (a.reelsCount || 0) || a.order - b.order,
       );
+      if (limit && limit > 0) {
+        all = all.slice(0, limit);
+      }
       return all;
     } catch (_) {
-      return types;
+      if (hasVideos) {
+        return [];
+      }
+      return limit && limit > 0 ? types.slice(0, limit) : types;
     }
   }
 
