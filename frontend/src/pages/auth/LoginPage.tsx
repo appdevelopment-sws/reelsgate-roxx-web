@@ -58,11 +58,11 @@ export const LoginPage: React.FC = () => {
     }
   }
 
-  const handleFillAdmin = () => {
-    setEmail("admin@gmail.com")
-    setPassword("Admin@123")
-    setError(null)
-  }
+  // const handleFillAdmin = () => {
+  //   setEmail("admin@gmail.com")
+  //   setPassword("Admin@123")
+  //   setError(null)
+  // }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12 sm:px-6 lg:px-8">
