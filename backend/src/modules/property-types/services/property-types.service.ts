@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PropertyType } from '../entities/property-type.entity';
 import { SubCategory } from '../../categories/entities/sub-category.entity';
-import { Reel } from '../../reels/entities/reel.entity';
+import { Reel, ReelStatus, ReelVisibility } from '../../reels/entities/reel.entity';
 import {
   CreatePropertyTypeDto,
   UpdatePropertyTypeDto,
@@ -60,11 +60,102 @@ export class PropertyTypesService implements OnModuleInit {
       where.subCategoryId = resolvedSubId;
     }
 
-    return this.propertyTypeRepo.find({
+    const types = await this.propertyTypeRepo.find({
       where,
       order: { order: 'ASC', name: 'ASC' },
       relations: { subCategory: { category: true } },
     });
+
+    try {
+      const reels = await this.reelRepo
+        .createQueryBuilder('reel')
+        .leftJoinAndSelect('reel.media', 'media')
+        .where('reel.status = :status', { status: ReelStatus.READY })
+        .andWhere('reel.visibility = :visibility', {
+          visibility: ReelVisibility.PUBLIC,
+        })
+        .orderBy('reel.createdAt', 'DESC')
+        .getMany();
+
+      const reelsByPt = new Map<
+        string,
+        { count: number; thumbnail: string; reel: Reel }
+      >();
+      const reelsBySub = new Map<string, string>();
+      const reelsByCat = new Map<string, string>();
+
+      for (const r of reels) {
+        let thumb = (r as any).thumbnailUrl || r.media?.thumbnailKey || '';
+
+        const ptKey = (r.propertyType || '').toLowerCase().trim();
+        if (ptKey) {
+          const existing = reelsByPt.get(ptKey);
+          if (existing) {
+            existing.count++;
+            if (!existing.thumbnail && thumb) existing.thumbnail = thumb;
+          } else {
+            reelsByPt.set(ptKey, { count: 1, thumbnail: thumb, reel: r });
+          }
+        }
+
+        const subKey = (r.subCategory || '').toLowerCase().trim();
+        if (subKey && thumb && !reelsBySub.has(subKey)) {
+          reelsBySub.set(subKey, thumb);
+        }
+
+        const catKey = (r.category || '').toLowerCase().trim();
+        if (catKey && thumb && !reelsByCat.has(catKey)) {
+          reelsByCat.set(catKey, thumb);
+        }
+      }
+
+      const enriched = types.map((pt) => {
+        const matched =
+          reelsByPt.get(pt.name.toLowerCase().trim()) ||
+          reelsByPt.get(pt.slug.toLowerCase().trim()) ||
+          reelsByPt.get(pt.id.toLowerCase().trim());
+
+        const subThumb = pt.subCategory?.slug
+          ? reelsBySub.get(pt.subCategory.slug.toLowerCase())
+          : null;
+        const catThumb = pt.subCategory?.category?.slug
+          ? reelsByCat.get(pt.subCategory.category.slug.toLowerCase())
+          : null;
+
+        return {
+          ...pt,
+          reelsCount: matched ? matched.count : 0,
+          thumbnailUrl: matched?.thumbnail || subThumb || catThumb || null,
+        };
+      });
+
+      // Also include any property types from reels that aren't in property_types table (e.g. Girls Hostel)
+      const existingNames = new Set(types.map((t) => t.name.toLowerCase().trim()));
+      const customTypesFromReels: any[] = [];
+      for (const [key, data] of reelsByPt.entries()) {
+        if (!existingNames.has(key) && data.reel.propertyType) {
+          customTypesFromReels.push({
+            id: data.reel.propertyType,
+            name: data.reel.propertyType,
+            slug: data.reel.propertyType.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+            icon: 'home_work_rounded',
+            reelsCount: data.count,
+            thumbnailUrl: data.thumbnail,
+            isActive: true,
+            order: 999,
+          });
+        }
+      }
+
+      const all = [...enriched, ...customTypesFromReels];
+      all.sort(
+        (a, b) =>
+          (b.reelsCount || 0) - (a.reelsCount || 0) || a.order - b.order,
+      );
+      return all;
+    } catch (_) {
+      return types;
+    }
   }
 
   /**
