@@ -26,6 +26,7 @@ import {
   CreateReelReportDto,
   GetReelReportsQueryDto,
   UpdateReportStatusDto,
+  RevertReportDecisionDto,
 } from '../dto/reel-report.dto';
 import {
   InitUploadDto,
@@ -2253,6 +2254,8 @@ export class ReelsService {
 
   /**
    * Admin: Take down reported reel (mark reel DELETED and resolve report).
+   * Note: We soft-delete the reel status without purging S3 assets immediately
+   * so that moderation decisions can be reverted or reviewed on appeal.
    */
   async takedownReportedReel(reportId: string, adminId: string) {
     const report = await this.reportRepository.findOne({
@@ -2266,12 +2269,6 @@ export class ReelsService {
     if (report.reel) {
       report.reel.status = ReelStatus.DELETED;
       await this.reelRepository.save(report.reel);
-
-      // Async clean up assets in storage
-      const s3Prefix = `reels/${report.reel.id}`;
-      this.storageService.deleteFolder(s3Prefix).catch((err) => {
-        console.error(`Failed to delete S3 folder for Reel ${report.reelId}:`, err);
-      });
     }
 
     report.status = ReelReportStatus.RESOLVED;
@@ -2282,6 +2279,57 @@ export class ReelsService {
     return {
       success: true,
       message: 'Reel taken down successfully and report resolved.',
+    };
+  }
+
+  /**
+   * Admin: Revert moderation decision on a reported reel.
+   * If the reel was taken down (status DELETED), restores it to READY.
+   * Updates report status (defaults to PENDING) and appends admin notes.
+   */
+  async revertReportDecision(
+    reportId: string,
+    adminId: string,
+    dto?: RevertReportDecisionDto,
+  ) {
+    const report = await this.reportRepository.findOne({
+      where: { id: reportId },
+      relations: { reel: true },
+    });
+    if (!report) {
+      throw new NotFoundException('Report not found.');
+    }
+
+    let reelRestored = false;
+    if (report.reel && report.reel.status === ReelStatus.DELETED) {
+      report.reel.status = ReelStatus.READY;
+      await this.reelRepository.save(report.reel);
+      reelRestored = true;
+    }
+
+    const targetStatus = dto?.status || ReelReportStatus.PENDING;
+    report.status = targetStatus;
+    report.reviewedById = adminId;
+
+    const actionText = reelRestored
+      ? 'Decision reverted: Reel restored to public feed'
+      : 'Moderation decision reverted';
+    const noteText = dto?.adminNotes?.trim()
+      ? `${actionText}. Note: ${dto.adminNotes.trim()}`
+      : actionText;
+
+    report.adminNotes = report.adminNotes
+      ? `${report.adminNotes} | ${noteText}`
+      : noteText;
+
+    await this.reportRepository.save(report);
+
+    return {
+      success: true,
+      message: reelRestored
+        ? 'Decision reverted successfully. Video restored to public feed and report reopened.'
+        : `Decision reverted successfully. Report marked as ${targetStatus}.`,
+      report,
     };
   }
 }

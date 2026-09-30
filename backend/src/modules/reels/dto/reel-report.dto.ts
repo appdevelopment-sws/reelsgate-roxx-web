@@ -58,3 +58,23 @@ export class UpdateReportStatusDto {
   @IsString()
   adminNotes?: string;
 }
+
+export class RevertReportDecisionDto {
+  @ApiPropertyOptional({
+    enum: ReelReportStatus,
+    description: 'Target report status after revert (default: PENDING)',
+    default: ReelReportStatus.PENDING,
+  })
+  @IsOptional()
+  @IsEnum(ReelReportStatus)
+  status?: ReelReportStatus;
+
+  @ApiPropertyOptional({
+    example: 'Appeal approved or false positive. Restored video to feed.',
+    description: 'Optional admin notes or rationale for reverting the decision',
+  })
+  @IsOptional()
+  @IsString()
+  adminNotes?: string;
+}
+

@@ -690,6 +690,20 @@ export const reelReportsApi = {
     const response = await apiClient.post(`/reels/admin/reports/${id}/takedown`)
     return response.data
   },
+
+  revertDecision: async (
+    id: string,
+    data?: {
+      status?: 'PENDING' | 'REVIEWED' | 'RESOLVED' | 'DISMISSED';
+      adminNotes?: string;
+    }
+  ): Promise<{ success: boolean; message: string; report?: ReelReportItem }> => {
+    const response = await apiClient.post(
+      `/reels/admin/reports/${id}/revert`,
+      data || {}
+    )
+    return response.data
+  },
 }
 
 export interface FeedbackItem {

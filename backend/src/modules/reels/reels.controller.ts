@@ -37,6 +37,7 @@ import {
   CreateReelReportDto,
   GetReelReportsQueryDto,
   UpdateReportStatusDto,
+  RevertReportDecisionDto,
 } from './dto/reel-report.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -208,6 +209,24 @@ export class ReelsController {
   takedownReportedReel(@Req() req: any, @Param('id') id: string) {
     const adminId = req.user?.sub;
     return this.reelsService.takedownReportedReel(id, adminId);
+  }
+
+  @ApiBearerAuth()
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Admin: Revert decision on reported reel (restore video / reopen report)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Decision reverted and video restored if previously taken down.',
+  })
+  @Post('admin/reports/:id/revert')
+  @HttpCode(HttpStatus.OK)
+  revertReportDecision(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto?: RevertReportDecisionDto,
+  ) {
+    const adminId = req.user?.sub;
+    return this.reelsService.revertReportDecision(id, adminId, dto);
   }
 
   @Public()

@@ -19,6 +19,9 @@ import {
   ChevronRight,
   User,
   Film,
+  RotateCcw,
+  X,
+  Info,
 } from 'lucide-react';
 
 export const ReportedReelsPage: React.FC = () => {
@@ -134,6 +137,46 @@ export const ReportedReelsPage: React.FC = () => {
         text: e?.response?.data?.message || 'Failed to take down reported reel.',
       });
     } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Revert modal state
+  const [revertModalReport, setRevertModalReport] = useState<ReelReportItem | null>(null);
+  const [revertTargetStatus, setRevertTargetStatus] = useState<'PENDING' | 'DISMISSED'>('PENDING');
+  const [revertNote, setRevertNote] = useState('');
+  const [isReverting, setIsReverting] = useState(false);
+
+  const openRevertModal = (report: ReelReportItem) => {
+    setRevertModalReport(report);
+    setRevertTargetStatus('PENDING');
+    setRevertNote('');
+  };
+
+  const handleConfirmRevert = async () => {
+    if (!revertModalReport) return;
+    setIsReverting(true);
+    setActionLoadingId(revertModalReport.id);
+    setAlertMessage(null);
+    try {
+      const res = await reelReportsApi.revertDecision(revertModalReport.id, {
+        status: revertTargetStatus,
+        adminNotes: revertNote.trim() || undefined,
+      });
+      setAlertMessage({
+        type: 'success',
+        text: res.message || 'Decision reverted successfully.',
+      });
+      setRevertModalReport(null);
+      setRevertNote('');
+      await fetchReports(page);
+    } catch (e: any) {
+      setAlertMessage({
+        type: 'error',
+        text: e?.response?.data?.message || 'Failed to revert moderation decision.',
+      });
+    } finally {
+      setIsReverting(false);
       setActionLoadingId(null);
     }
   };
@@ -410,9 +453,9 @@ export const ReportedReelsPage: React.FC = () => {
                         <div className="flex gap-3">
                           {/* Video Thumbnail with Play Button */}
                           <div
-                            onClick={() => hasReel && !isDeleted && handlePlayVideo(report)}
+                            onClick={() => hasReel && handlePlayVideo(report)}
                             className={`relative shrink-0 w-20 h-28 rounded-xl overflow-hidden bg-black/30 border border-border/80 ${
-                              hasReel && !isDeleted ? 'cursor-pointer group/thumb shadow-sm' : 'opacity-60'
+                              hasReel ? 'cursor-pointer group/thumb shadow-sm' : 'opacity-60'
                             }`}
                           >
                             {report.reel?.media?.thumbnailUrl ? (
@@ -427,7 +470,7 @@ export const ReportedReelsPage: React.FC = () => {
                               </div>
                             )}
 
-                            {hasReel && !isDeleted && (
+                            {hasReel && (
                               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition duration-200">
                                 <div className="w-8 h-8 rounded-full bg-white/90 text-black flex items-center justify-center shadow">
                                   <Play className="w-4 h-4 fill-black translate-x-0.5" />
@@ -436,8 +479,8 @@ export const ReportedReelsPage: React.FC = () => {
                             )}
 
                             {isDeleted && (
-                              <div className="absolute inset-0 bg-rose-950/80 flex items-center justify-center p-1 text-center">
-                                <span className="text-[10px] font-bold text-rose-300 uppercase">Taken Down</span>
+                              <div className="absolute top-1 inset-x-1 bg-rose-950/90 text-rose-300 text-[9px] font-bold uppercase py-0.5 px-1 rounded text-center backdrop-blur-sm border border-rose-500/30 shadow">
+                                Taken Down
                               </div>
                             )}
                           </div>
@@ -535,17 +578,31 @@ export const ReportedReelsPage: React.FC = () => {
                       {/* Moderation Actions */}
                       <td className="py-4 px-4 align-top text-right whitespace-nowrap">
                         <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
-                          {hasReel && !isDeleted && (
+                          {hasReel && (
                             <button
                               onClick={() => handlePlayVideo(report)}
-                              title="Play Video in Player"
+                              title={isDeleted ? 'Preview Taken Down Video' : 'Play Video in Player'}
                               className="p-2 rounded-xl text-primary hover:bg-primary/10 transition border border-transparent hover:border-primary/20"
                             >
                               <Play className="w-4 h-4 fill-primary" />
                             </button>
                           )}
 
-                          {report.status !== 'RESOLVED' && !isDeleted && hasReel && (
+                          {/* Revert takedown if video is deleted */}
+                          {isDeleted && (
+                            <button
+                              onClick={() => openRevertModal(report)}
+                              disabled={isActionLoading}
+                              title="Revert takedown and restore video to public feed"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition shadow-sm disabled:opacity-50"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              Revert Takedown
+                            </button>
+                          )}
+
+                          {/* Take Down video if not deleted */}
+                          {!isDeleted && hasReel && (
                             <button
                               onClick={() => handleTakedown(report)}
                               disabled={isActionLoading}
@@ -557,6 +614,7 @@ export const ReportedReelsPage: React.FC = () => {
                             </button>
                           )}
 
+                          {/* Dismiss pending report */}
                           {report.status === 'PENDING' && (
                             <button
                               onClick={() => handleUpdateStatus(report.id, 'DISMISSED', 'Reviewed - no violation.')}
@@ -569,6 +627,7 @@ export const ReportedReelsPage: React.FC = () => {
                             </button>
                           )}
 
+                          {/* Resolve pending report if video was already deleted */}
                           {report.status === 'PENDING' && isDeleted && (
                             <button
                               onClick={() => handleUpdateStatus(report.id, 'RESOLVED', 'Reel already deleted.')}
@@ -577,6 +636,19 @@ export const ReportedReelsPage: React.FC = () => {
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               Resolve
+                            </button>
+                          )}
+
+                          {/* Revert resolved or dismissed decision on non-deleted video */}
+                          {!isDeleted && (report.status === 'RESOLVED' || report.status === 'DISMISSED') && (
+                            <button
+                              onClick={() => openRevertModal(report)}
+                              disabled={isActionLoading}
+                              title="Revert decision and reopen this report for review"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted text-foreground border border-border hover:bg-muted/80 transition disabled:opacity-50"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
+                              Revert Decision
                             </button>
                           )}
                         </div>
@@ -638,6 +710,178 @@ export const ReportedReelsPage: React.FC = () => {
           currentIndex={selectedReelIndex}
           onNavigate={(idx) => setSelectedReelIndex(idx)}
         />
+      )}
+
+      {/* Revert Decision Modal */}
+      {revertModalReport && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    {revertModalReport.reel?.status === 'DELETED'
+                      ? 'Revert Takedown & Restore Video'
+                      : 'Revert Moderation Decision'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {revertModalReport.reel?.status === 'DELETED'
+                      ? 'Restore the video back to public feed and reset moderation status.'
+                      : 'Reopen this report for re-evaluation.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRevertModalReport(null)}
+                disabled={isReverting}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              {/* Target Item Summary */}
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/80 flex items-start gap-3">
+                {revertModalReport.reel?.media?.thumbnailUrl ? (
+                  <img
+                    src={revertModalReport.reel.media.thumbnailUrl}
+                    alt=""
+                    className="w-12 h-16 rounded-lg object-cover bg-black/20 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Film className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-primary px-1.5 py-0.5 rounded bg-primary/10">
+                      {revertModalReport.reel?.category || 'Reel'}
+                    </span>
+                    {revertModalReport.reel?.status === 'DELETED' ? (
+                      <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                        Currently Taken Down
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        Live / Active
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-foreground text-sm truncate mt-1">
+                    {revertModalReport.reel?.title || 'Reported Video'}
+                  </h4>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Creator: {revertModalReport.reel?.creator?.name || 'Unknown'} | Reason: {revertModalReport.reason}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informational Callout */}
+              {revertModalReport.reel?.status === 'DELETED' ? (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-500 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Restoring Video to Public Feed</span>
+                    This video will be changed from <span className="font-bold">DELETED</span> to <span className="font-bold">READY</span> and immediately become visible and playable across all user feeds, recommendations, and creator profiles.
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-500 flex items-start gap-2.5">
+                  <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Reopening Report</span>
+                    This report will be reopened and moved into the pending moderation queue for further action.
+                  </div>
+                </div>
+              )}
+
+              {/* Target Status Choice */}
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  Set Report Status After Revert:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRevertTargetStatus('PENDING')}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border text-left transition flex items-center justify-between ${
+                      revertTargetStatus === 'PENDING'
+                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 ring-1 ring-amber-500/20'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/60'
+                    }`}
+                  >
+                    <span>Pending Review</span>
+                    <Clock className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRevertTargetStatus('DISMISSED')}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border text-left transition flex items-center justify-between ${
+                      revertTargetStatus === 'DISMISSED'
+                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-500 ring-1 ring-emerald-500/20'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/60'
+                    }`}
+                  >
+                    <span>Dismiss Violation</span>
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Revert Reason / Admin Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  Admin Note / Rationale (Optional):
+                </label>
+                <textarea
+                  rows={3}
+                  value={revertNote}
+                  onChange={(e) => setRevertNote(e.target.value)}
+                  placeholder={
+                    revertModalReport.reel?.status === 'DELETED'
+                      ? 'e.g., Creator appeal approved; video deemed compliant after second review.'
+                      : 'e.g., Reopened due to additional context from community.'
+                  }
+                  className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2.5 p-4 border-t border-border bg-muted/20">
+              <button
+                type="button"
+                onClick={() => setRevertModalReport(null)}
+                disabled={isReverting}
+                className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRevert}
+                disabled={isReverting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-md transition disabled:opacity-50"
+              >
+                {isReverting ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5" />
+                )}
+                {revertModalReport.reel?.status === 'DELETED'
+                  ? 'Confirm & Restore Video'
+                  : 'Confirm Revert'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
