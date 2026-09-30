@@ -900,9 +900,14 @@ export class AuthService implements OnModuleInit {
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
+    const refreshToken = await this.jwtService.signAsync(
+      { sub: user.id, type: 'refresh' },
+      { expiresIn: '90d' },
+    );
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -929,6 +934,46 @@ export class AuthService implements OnModuleInit {
         createdAt: user.createdAt,
       },
     };
+  }
+
+  /**
+   * Refresh Access Token using valid Refresh Token
+   */
+  async refreshToken(token: string) {
+    if (!token || typeof token !== 'string') {
+      throw new BadRequestException('Refresh token must be provided');
+    }
+
+    try {
+      const secret = this.configService.get<string>('JWT_SECRET');
+      const payload = await this.jwtService.verifyAsync(token, { secret });
+
+      if (!payload || !payload.sub || payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      }
+
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.roles', 'roles')
+        .leftJoinAndSelect('roles.permissions', 'permissions')
+        .where('user.id = :id', { id: payload.sub })
+        .getOne();
+
+      if (!user) {
+        throw new UnauthorizedException('User account no longer exists');
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('User account is deactivated');
+      }
+
+      return this.generateAuthResponse(user);
+    } catch (e) {
+      if (e instanceof UnauthorizedException || e instanceof BadRequestException) {
+        throw e;
+      }
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
   }
 
   /**
