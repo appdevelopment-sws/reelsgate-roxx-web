@@ -102,8 +102,8 @@ export class ReelsService {
       category: dto.category || 'general',
       subCategory: dto.subCategory || '',
       propertyType: dto.propertyType || '',
-      minPrice: dto.minPrice != null ? dto.minPrice : null,
-      maxPrice: dto.maxPrice != null ? dto.maxPrice : null,
+      minPrice: dto.minPrice != null && dto.minPrice > 0 ? dto.minPrice : null,
+      maxPrice: dto.maxPrice != null && dto.maxPrice > 0 ? dto.maxPrice : null,
       element: dto.element || '',
       location: dto.location || '',
       landmark: dto.landmark || '',
@@ -287,13 +287,13 @@ export class ReelsService {
     }
     if (query.minPrice != null && query.minPrice > 0) {
       qb.andWhere(
-        '(reel.maxPrice >= :minPrice OR (reel.maxPrice IS NULL AND reel.minPrice >= :minPrice))',
+        'COALESCE(NULLIF(reel.maxPrice, 0), NULLIF(reel.minPrice, 0)) >= :minPrice',
         { minPrice: query.minPrice },
       );
     }
     if (query.maxPrice != null && query.maxPrice < 50000000) {
       qb.andWhere(
-        '(reel.minPrice <= :maxPrice OR (reel.minPrice IS NULL AND reel.maxPrice <= :maxPrice))',
+        'COALESCE(NULLIF(reel.minPrice, 0), NULLIF(reel.maxPrice, 0)) <= :maxPrice AND COALESCE(NULLIF(reel.minPrice, 0), NULLIF(reel.maxPrice, 0)) > 0',
         { maxPrice: query.maxPrice },
       );
     }
@@ -365,13 +365,13 @@ export class ReelsService {
       );
     } else if (query.sortBy === FeedSortBy.PRICE_LOW_HIGH) {
       qb.orderBy(
-        'COALESCE(reel.minPrice, reel.maxPrice)',
+        'COALESCE(NULLIF(reel.minPrice, 0), NULLIF(reel.maxPrice, 0))',
         'ASC',
         'NULLS LAST',
       ).addOrderBy('reel.createdAt', 'DESC');
     } else if (query.sortBy === FeedSortBy.PRICE_HIGH_LOW) {
       qb.orderBy(
-        'COALESCE(reel.maxPrice, reel.minPrice)',
+        'COALESCE(NULLIF(reel.maxPrice, 0), NULLIF(reel.minPrice, 0))',
         'DESC',
         'NULLS LAST',
       ).addOrderBy('reel.createdAt', 'DESC');
@@ -654,12 +654,18 @@ export class ReelsService {
           city: reel.city,
           state: reel.state,
           pincode: reel.pincode,
-          minPrice: reel.minPrice != null ? Number(reel.minPrice) : null,
-          maxPrice: reel.maxPrice != null ? Number(reel.maxPrice) : null,
-          price:
-            reel.minPrice != null
+          minPrice:
+            reel.minPrice != null && Number(reel.minPrice) > 0
               ? Number(reel.minPrice)
-              : reel.maxPrice != null
+              : null,
+          maxPrice:
+            reel.maxPrice != null && Number(reel.maxPrice) > 0
+              ? Number(reel.maxPrice)
+              : null,
+          price:
+            reel.minPrice != null && Number(reel.minPrice) > 0
+              ? Number(reel.minPrice)
+              : reel.maxPrice != null && Number(reel.maxPrice) > 0
                 ? Number(reel.maxPrice)
                 : null,
           latitude: reel.latitude != null ? Number(reel.latitude) : null,
@@ -854,8 +860,14 @@ export class ReelsService {
           category: reel.category,
           subCategory: reel.subCategory,
           propertyType: reel.propertyType,
-          minPrice: reel.minPrice != null ? Number(reel.minPrice) : null,
-          maxPrice: reel.maxPrice != null ? Number(reel.maxPrice) : null,
+          minPrice:
+            reel.minPrice != null && Number(reel.minPrice) > 0
+              ? Number(reel.minPrice)
+              : null,
+          maxPrice:
+            reel.maxPrice != null && Number(reel.maxPrice) > 0
+              ? Number(reel.maxPrice)
+              : null,
           element: reel.element,
           location: reel.location,
           landmark: reel.landmark,
@@ -1947,8 +1959,12 @@ export class ReelsService {
     if (dto.category !== undefined) reel.category = dto.category;
     if (dto.subCategory !== undefined) reel.subCategory = dto.subCategory;
     if (dto.propertyType !== undefined) reel.propertyType = dto.propertyType;
-    if (dto.minPrice !== undefined) reel.minPrice = dto.minPrice;
-    if (dto.maxPrice !== undefined) reel.maxPrice = dto.maxPrice;
+    if (dto.minPrice !== undefined)
+      reel.minPrice =
+        dto.minPrice != null && dto.minPrice > 0 ? dto.minPrice : null;
+    if (dto.maxPrice !== undefined)
+      reel.maxPrice =
+        dto.maxPrice != null && dto.maxPrice > 0 ? dto.maxPrice : null;
     if (dto.element !== undefined) reel.element = dto.element;
     if (dto.location !== undefined) reel.location = dto.location;
     if (dto.landmark !== undefined) reel.landmark = dto.landmark;
