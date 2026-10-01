@@ -1,12 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface SendEmailOptions {
+  to: string;
+  subject: string;
+  template: string;
+  context: Record<string, any>;
+}
+
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter | null = null;
   private readonly templateCache = new Map<
@@ -18,35 +25,91 @@ export class MailService {
     this.initTransporter();
   }
 
+  async onModuleInit() {
+    if (this.transporter) {
+      await this.verifyConnection();
+    }
+  }
+
   /**
-   * Initialize Nodemailer Transporter using MAIL_EMAIL and MAIL_PASSWORD
+   * Initialize Nodemailer Transporter using Hostinger SMTP
    */
   private initTransporter() {
-    const user = this.configService.get<string>('MAIL_EMAIL')?.trim();
-    const pass = this.configService.get<string>('MAIL_PASSWORD')?.trim();
+    const user =
+      this.configService.get<string>('MAIL_EMAIL')?.trim() ||
+      this.configService.get<string>('MAIL_USER')?.trim();
+    const pass =
+      this.configService.get<string>('MAIL_PASSWORD')?.trim() ||
+      this.configService.get<string>('MAIL_PASS')?.trim();
 
     if (!user || !pass) {
       this.logger.warn(
-        '⚠️ MAIL_EMAIL or MAIL_PASSWORD is not set in environment. Outgoing emails will be mocked in console.',
+        '⚠️ MAIL_EMAIL (or MAIL_USER) and MAIL_PASSWORD are not set in environment. Outgoing emails will be mocked in console.',
       );
       return;
     }
 
+    // Hostinger SMTP host (default: smtp.hostinger.com)
+    const host =
+      this.configService.get<string>('MAIL_HOST')?.trim() ||
+      'smtp.hostinger.com';
+
+    // Hostinger port: 465 (SSL) or 587 (TLS/STARTTLS)
+    const rawPort = this.configService.get<string | number>('MAIL_PORT');
+    const port = rawPort ? Number(rawPort) : 465;
+
+    // Secure: true for 465, false for 587
+    const rawSecure = this.configService.get<string | boolean>('MAIL_SECURE');
+    const secure =
+      rawSecure !== undefined && rawSecure !== ''
+        ? String(rawSecure).toLowerCase() === 'true'
+        : port === 465;
+
     try {
       this.transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host,
+        port,
+        secure,
         auth: {
           user,
           pass,
         },
+        tls: {
+          rejectUnauthorized: true,
+        },
       });
 
-      this.logger.log(`📧 MailService initialized with sender: ${user}`);
+      this.logger.log(
+        `📧 MailService initialized with Hostinger SMTP (${host}:${port}, secure=${secure}, user=${user})`,
+      );
     } catch (error: any) {
       this.logger.error(
         'Failed to initialize nodemailer transporter',
         error?.stack || error,
       );
+    }
+  }
+
+  /**
+   * Verify Hostinger SMTP connection on startup or on demand
+   */
+  async verifyConnection(): Promise<boolean> {
+    if (!this.transporter) {
+      this.logger.warn(
+        'Hostinger SMTP verify skipped: Transporter not initialized (missing credentials)',
+      );
+      return false;
+    }
+
+    try {
+      await this.transporter.verify();
+      this.logger.log('✅ Hostinger SMTP server connection verified successfully.');
+      return true;
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Hostinger SMTP verification failed: ${error?.message || error}. Check MAIL_HOST, MAIL_PORT, MAIL_EMAIL, and MAIL_PASSWORD in your .env.`,
+      );
+      return false;
     }
   }
 
@@ -103,16 +166,17 @@ export class MailService {
   /**
    * Send Email with HTML template
    */
-  async sendEmail(options: {
-    to: string;
-    subject: string;
-    template: string;
-    context: Record<string, any>;
-  }): Promise<boolean> {
+  async sendEmail(options: SendEmailOptions): Promise<boolean> {
     const senderEmail =
+      this.configService.get<string>('MAIL_FROM_ADDRESS')?.trim() ||
       this.configService.get<string>('MAIL_EMAIL')?.trim() ||
-      'noreply@Reelsgate.com';
-    const fromAddress = `"Reelsgate" <${senderEmail}>`;
+      this.configService.get<string>('MAIL_USER')?.trim() ||
+      'noreply@reelsgate.com';
+
+    const senderName =
+      this.configService.get<string>('MAIL_FROM_NAME')?.trim() || 'Reelsgate';
+
+    const fromAddress = `"${senderName}" <${senderEmail}>`;
 
     const template = this.getCompiledTemplate(options.template);
     const html = template({
@@ -193,3 +257,4 @@ export class MailService {
     });
   }
 }
+
