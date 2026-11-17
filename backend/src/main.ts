@@ -1,12 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import * as express from 'express';
 import * as path from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Trust reverse proxy (Nginx / Cloudflare) to ensure accurate client IP for rate limiting
+  app.set('trust proxy', true);
 
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 

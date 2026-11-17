@@ -1,4 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -57,6 +59,27 @@ import { HTTPLoggerMiddleware } from './modules/common/middleware/logger.middlew
         },
       }),
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: Number(configService.get<number>('THROTTLE_TTL', 60000)),
+            limit: Number(configService.get<number>('THROTTLE_LIMIT', 100)),
+          },
+        ],
+        errorMessage: (_context, details) => {
+          const minutes = Math.round(details.ttl / 60000);
+          const timeDesc =
+            minutes >= 60
+              ? `${Math.round(minutes / 60)} hour(s)`
+              : `${minutes} minute(s)`;
+          return `Rate limit exceeded. Maximum ${details.limit} requests per ${timeDesc}. Please try again later.`;
+        },
+      }),
+    }),
     AuthModule,
     UsersModule,
     ReelsModule,
@@ -73,7 +96,13 @@ import { HTTPLoggerMiddleware } from './modules/common/middleware/logger.middlew
     FeedbackModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

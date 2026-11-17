@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Patch, Body, UseGuards, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiQuery, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiQuery, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -19,6 +19,7 @@ import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Roles } from './decorators/roles.decorator';
 import { Permissions } from './decorators/permissions.decorator';
+import { AuthThrottle } from './decorators/auth-throttle.decorator';
 
 @ApiTags('auth')
 @ApiBearerAuth()
@@ -35,50 +36,63 @@ export class AuthController {
   }
 
   @Public()
+  @AuthThrottle()
   @Post('register')
   @ApiOperation({ summary: 'Direct registration' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('register/send-otp')
   @ApiOperation({ summary: 'Send email verification OTP for new account registration' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async sendRegisterOtp(@Body() dto: RegisterDto) {
     return this.authService.sendRegistrationOtp(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('register/verify-otp')
   @ApiOperation({ summary: 'Verify email registration OTP and activate user account' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async verifyRegisterOtp(@Body() dto: VerifyRegisterOtpDto) {
     return this.authService.verifyRegistrationOtp(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('forgot-password/send-otp')
   @ApiOperation({ summary: 'Send password reset OTP to registered email' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async sendForgotPasswordOtp(@Body() dto: ForgotPasswordDto) {
     return this.authService.sendForgotPasswordOtp(dto);
   }
 
-
   @Public()
+  @AuthThrottle()
   @Post('forgot-password/verify-otp')
   @ApiOperation({ summary: 'Verify password reset OTP' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async verifyForgotPasswordOtp(@Body() dto: VerifyRegisterOtpDto) {
     return this.authService.verifyForgotPasswordOtp(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('forgot-password/reset')
   @ApiOperation({ summary: 'Reset account password using verified OTP' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('login')
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -98,15 +112,19 @@ export class AuthController {
   }
 
   @Public()
+  @AuthThrottle()
   @Post('phone/send-otp')
   @ApiOperation({ summary: 'Send OTP to mobile phone number' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async sendPhoneOtp(@Body() dto: SendOtpDto) {
     return this.authService.sendPhoneOtp(dto);
   }
 
   @Public()
+  @AuthThrottle()
   @Post('phone/verify-otp')
   @ApiOperation({ summary: 'Verify mobile phone OTP and sign in or sign up' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async verifyPhoneOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyPhoneOtp(dto);
   }
@@ -124,8 +142,10 @@ export class AuthController {
     return this.authService.updateProfile(userId, dto);
   }
 
+  @AuthThrottle()
   @Post('change-password')
   @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (Max 10 requests per hour)' })
   async changePassword(
     @CurrentUser('sub') userId: string,
     @Body() dto: ChangePasswordDto,
