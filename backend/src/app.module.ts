@@ -39,7 +39,7 @@ import { HTTPLoggerMiddleware } from './modules/common/middleware/logger.middlew
         password: configService.get<string>('DB_PASSWORD', 'root_password'),
         database:
           configService.get<string>('DB_DATABASE') ||
-          configService.get<string>('DB_NAME', 'vastu_reel_db'),
+          configService.get<string>('DB_NAME', 'reelsgate_roxx_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize:
           configService.get<string>('DB_SYNCHRONIZE') === 'true' ||

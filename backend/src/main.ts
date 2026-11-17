@@ -27,8 +27,8 @@ async function bootstrap() {
 
   // Swagger Documentation Configuration
   const config = new DocumentBuilder()
-    .setTitle('Vastu API')
-    .setDescription('Backend REST API Documentation')
+    .setTitle('Reelsgate Roxx API')
+    .setDescription('Reelsgate Roxx Backend REST API Documentation')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

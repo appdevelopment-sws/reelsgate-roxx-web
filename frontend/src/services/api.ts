@@ -43,7 +43,7 @@ export const apiClient = axios.create({
 // Attach Authorization Bearer Token on every request if present
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("vastu_token")
+    const token = localStorage.getItem("reelsgate_roxx_token")
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -62,8 +62,8 @@ apiClient.interceptors.response.use(
         !window.location.pathname.includes("/login") &&
         !window.location.pathname.includes("/register")
       ) {
-        localStorage.removeItem("vastu_token")
-        localStorage.removeItem("vastu_user")
+        localStorage.removeItem("reelsgate_roxx_token")
+        localStorage.removeItem("reelsgate_roxx_user")
       }
     }
     return Promise.reject(error)

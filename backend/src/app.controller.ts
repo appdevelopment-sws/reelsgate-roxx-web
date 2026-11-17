@@ -90,10 +90,10 @@ export class AppController {
 
   <!-- App Links (Android & iOS) -->
   <meta property="al:android:url" content="${appSchemeUrl}">
-  <meta property="al:android:package" content="com.sws.reelsgate">
-  <meta property="al:android:app_name" content="Reelsgate">
+  <meta property="al:android:package" content="com.sws.reelsgate.roxx">
+  <meta property="al:android:app_name" content="Reelsgate Roxx">
   <meta property="al:ios:url" content="${appSchemeUrl}">
-  <meta property="al:ios:app_name" content="Reelsgate">
+  <meta property="al:ios:app_name" content="Reelsgate Roxx">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -313,10 +313,10 @@ export class AppController {
 
   <!-- App Links (Android & iOS) -->
   <meta property="al:android:url" content="${appSchemeUrl}">
-  <meta property="al:android:package" content="com.sws.reelsgate">
-  <meta property="al:android:app_name" content="Reelsgate">
+  <meta property="al:android:package" content="com.sws.reelsgate.roxx">
+  <meta property="al:android:app_name" content="Reelsgate Roxx">
   <meta property="al:ios:url" content="${appSchemeUrl}">
-  <meta property="al:ios:app_name" content="Reelsgate">
+  <meta property="al:ios:app_name" content="Reelsgate Roxx">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }

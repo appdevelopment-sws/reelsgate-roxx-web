@@ -4,8 +4,8 @@ import { authApi } from '../services/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'vastu_token';
-const USER_KEY = 'vastu_user';
+const TOKEN_KEY = 'reelsgate_roxx_token';
+const USER_KEY = 'reelsgate_roxx_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));

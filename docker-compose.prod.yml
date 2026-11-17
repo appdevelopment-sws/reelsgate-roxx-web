@@ -1,17 +1,19 @@
+name: reelsgate-roxx-prod
+
 services:
   # ============================================================================
   # MySQL Database Service
   # ============================================================================
   mysql:
     image: mysql:8.0
-    container_name: vastu_reel_mysql_prod
+    container_name: reelsgate_roxx_mysql_prod
     restart: always
     env_file:
       - ./backend/.env.prod
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:${DB_HOST_PORT:-3308}:3306"
     volumes:
-      - mysql_prod_data:/var/lib/mysql
+      - reelsgate_roxx_mysql_prod_data:/var/lib/mysql
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -28,7 +30,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - vastu_prod_network
+      - reelsgate_roxx_prod_network
     logging:
       driver: "json-file"
       options:
@@ -40,7 +42,7 @@ services:
   # ============================================================================
   redis:
     image: redis:7.2-alpine
-    container_name: vastu_reel_redis_prod
+    container_name: reelsgate_roxx_redis_prod
     restart: always
     env_file:
       - ./backend/.env.prod
@@ -53,16 +55,16 @@ services:
         fi
       '
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6381}:6379"
     volumes:
-      - redis_prod_data:/data
+      - reelsgate_roxx_redis_prod_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - vastu_prod_network
+      - reelsgate_roxx_prod_network
     logging:
       driver: "json-file"
       options:
@@ -76,12 +78,12 @@ services:
     build:
       context: ./backend
       dockerfile: dockerfile.prod
-    container_name: vastu_reel_backend_prod
+    container_name: reelsgate_roxx_backend_prod
     restart: always
     env_file:
       - ./backend/.env.prod
     ports:
-      - "3002:8008"
+      - "${BACKEND_PORT:-8018}:8008"
     volumes:
       - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
     depends_on:
@@ -90,7 +92,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - vastu_prod_network
+      - reelsgate_roxx_prod_network
     logging:
       driver: "json-file"
       options:
@@ -106,14 +108,14 @@ services:
       dockerfile: dockerfile.prod
       args:
         - VITE_API_URL=/api
-    container_name: vastu_reel_frontend_prod
+    container_name: reelsgate_roxx_frontend_prod
     restart: always
     ports:
-      - "8000:80"
+      - "${FRONTEND_PORT:-8082}:80"
     depends_on:
       - backend
     networks:
-      - vastu_prod_network
+      - reelsgate_roxx_prod_network
     logging:
       driver: "json-file"
       options:
@@ -124,11 +126,11 @@ services:
 # Networks & Persistent Volumes
 # ==============================================================================
 networks:
-  vastu_prod_network:
+  reelsgate_roxx_prod_network:
     driver: bridge
 
 volumes:
-  mysql_prod_data:
+  reelsgate_roxx_mysql_prod_data:
     driver: local
-  redis_prod_data:
+  reelsgate_roxx_redis_prod_data:
     driver: local
